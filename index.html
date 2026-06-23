@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Perceptron in Silicon — a live purple paper</title>
+<style>
+  :root{
+    --bg:#0a0710; --panel:#140d20; --panel2:#1b1230; --edge:#2e2148;
+    --ink:#ece3f7; --dim:#9a86bd; --faint:#6b5a8c;
+    --violet:#a78bfa; --violet2:#c4b5fd; --glow:#7c3aed;
+    --taken:#34d399; --nottaken:#fb7185; --warn:#fbbf24;
+    --mono:'SFMono-Regular',ui-monospace,'Cascadia Code',Menlo,Consolas,monospace;
+    --serif:'Iowan Old Style','Palatino Linotype',Palatino,Georgia,serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:var(--serif);line-height:1.55;
+    background-image:radial-gradient(1200px 600px at 70% -10%,#1a1030 0%,transparent 60%),
+      radial-gradient(900px 500px at 0% 100%,#150b28 0%,transparent 55%);}
+  .wrap{max-width:1040px;margin:0 auto;padding:42px 26px 90px}
+  header{border-bottom:1px solid var(--edge);padding-bottom:22px;margin-bottom:30px}
+  .kicker{font-family:var(--mono);font-size:11px;letter-spacing:.32em;text-transform:uppercase;
+    color:var(--violet);opacity:.9}
+  h1{font-size:34px;line-height:1.12;margin:.32em 0 .18em;font-weight:600;letter-spacing:.2px}
+  h1 em{color:var(--violet2);font-style:italic}
+  .sub{color:var(--dim);font-size:15.5px;max-width:74ch}
+  .lin{font-family:var(--mono);font-size:11.5px;color:var(--faint);margin-top:14px;letter-spacing:.02em}
+  .lin b{color:var(--violet);font-weight:500}
+  section{margin:38px 0}
+  h2{font-size:13px;font-family:var(--mono);letter-spacing:.22em;text-transform:uppercase;
+    color:var(--violet2);border-left:2px solid var(--glow);padding-left:11px;margin:0 0 6px}
+  .lede{color:var(--dim);font-size:15px;margin:0 0 18px;max-width:78ch}
+  .panel{background:linear-gradient(180deg,var(--panel),#100a1b);border:1px solid var(--edge);
+    border-radius:14px;padding:20px 20px 22px;box-shadow:0 1px 0 #2e2148 inset,0 24px 60px -40px #000}
+  .controls{display:flex;flex-wrap:wrap;gap:9px;align-items:center;margin-bottom:18px}
+  button{font-family:var(--mono);font-size:12px;letter-spacing:.04em;color:var(--ink);
+    background:#241738;border:1px solid var(--edge);border-radius:8px;padding:8px 13px;cursor:pointer;
+    transition:.15s}
+  button:hover{background:#2e1f48;border-color:var(--violet)}
+  button.on{background:var(--glow);border-color:var(--violet2);color:#fff;box-shadow:0 0 16px -4px var(--glow)}
+  select{font-family:var(--mono);font-size:12px;background:#241738;color:var(--ink);
+    border:1px solid var(--edge);border-radius:8px;padding:8px 10px}
+  label.sl{font-family:var(--mono);font-size:11px;color:var(--dim);display:flex;align-items:center;gap:8px}
+  input[type=range]{accent-color:var(--violet);width:120px}
+  .pgrid{display:grid;grid-template-columns:1.15fr .85fr;gap:22px}
+  @media(max-width:780px){.pgrid{grid-template-columns:1fr}}
+  .mono{font-family:var(--mono)}
+  .bigread{display:flex;gap:26px;flex-wrap:wrap;align-items:baseline;margin:4px 0 16px}
+  .stat .v{font-family:var(--mono);font-size:25px;font-weight:600;letter-spacing:.5px}
+  .stat .k{font-family:var(--mono);font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--faint)}
+  .pill{font-family:var(--mono);font-size:20px;font-weight:700;padding:4px 14px;border-radius:9px;
+    display:inline-block;min-width:128px;text-align:center;transition:.12s}
+  .pill.t{color:#04150d;background:var(--taken)}
+  .pill.n{color:#1a0410;background:var(--nottaken)}
+  .verdict{font-family:var(--mono);font-size:12px;letter-spacing:.14em;padding:4px 10px;border-radius:7px}
+  .verdict.hit{color:var(--taken);border:1px solid #14593f;background:#0c2018}
+  .verdict.miss{color:var(--nottaken);border:1px solid #5c1f2e;background:#220c12}
+  canvas{display:block;width:100%;border-radius:10px;background:#0c0717;border:1px solid var(--edge)}
+  .cap{font-family:var(--mono);font-size:11px;color:var(--faint);margin-top:7px;text-align:center}
+  .histrow{display:flex;gap:5px;margin:8px 0 4px;flex-wrap:wrap}
+  .hbit{font-family:var(--mono);font-size:12px;width:26px;height:26px;display:flex;align-items:center;
+    justify-content:center;border-radius:6px;border:1px solid var(--edge)}
+  .hbit.p{color:var(--taken);background:#0c2018;border-color:#14593f}
+  .hbit.m{color:var(--nottaken);background:#220c12;border-color:#5c1f2e}
+  .acc-meter{height:9px;border-radius:6px;background:#1c1330;overflow:hidden;border:1px solid var(--edge)}
+  .acc-fill{height:100%;background:linear-gradient(90deg,var(--glow),var(--violet2));transition:width .2s}
+  .xgrid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  @media(max-width:680px){.xgrid{grid-template-columns:1fr}}
+  .xcard h3{font-family:var(--mono);font-size:12px;letter-spacing:.1em;margin:0 0 8px;color:var(--ink)}
+  .xcard .acc{font-family:var(--mono);font-size:22px;font-weight:700}
+  .three{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  @media(max-width:680px){.three{grid-template-columns:1fr}}
+  .scale{background:var(--panel2);border:1px solid var(--edge);border-radius:12px;padding:16px}
+  .scale .n{font-family:var(--mono);font-size:10px;letter-spacing:.2em;color:var(--violet);text-transform:uppercase}
+  .scale h4{margin:6px 0 6px;font-size:17px;font-weight:600}
+  .scale p{margin:0;color:var(--dim);font-size:13.5px}
+  .scale .eq{font-family:var(--mono);font-size:12px;color:var(--violet2);margin-top:10px;
+    background:#0e0a18;border:1px solid var(--edge);border-radius:7px;padding:7px 9px}
+  .arrowrow{display:flex;align-items:center;justify-content:center;color:var(--faint);
+    font-family:var(--mono);font-size:13px;margin:6px 0 0}
+  footer{margin-top:46px;border-top:1px solid var(--edge);padding-top:18px;color:var(--faint);
+    font-family:var(--mono);font-size:11px;line-height:1.7}
+  .note{color:var(--dim);font-size:13.5px;border-left:2px solid var(--edge);padding-left:13px;margin:16px 0 0}
+  code{font-family:var(--mono);font-size:.92em;color:var(--violet2);background:#170f28;padding:1px 5px;border-radius:5px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="kicker">Purple Paper · side-sheet · learning machines</div>
+  <h1>The Perceptron in <em>Silicon</em></h1>
+  <div class="sub">A single-layer perceptron — Rosenblatt's 1958 toy — is sitting in your CPU right now,
+    predicting branches one bit at a time. Below it runs live. Then we walk it into the wall that
+    stalled the first AI boom, and out the other side into the thing you're reading this on.</div>
+  <div class="lin"><b>1958</b> Rosenblatt's perceptron &nbsp;→&nbsp; <b>2001</b> Jiménez &amp; Lin put it in the fetch unit
+    &nbsp;→&nbsp; <b>now</b> a dot-product per cycle in your branch predictor &nbsp;→&nbsp; <b>the same atom</b>, stacked &amp; bent, in every LLM.</div>
+</header>
+
+<!-- ============ MODULE 1 : LIVE BRANCH PREDICTOR ============ -->
+<section>
+  <h2>I · The predictor, running</h2>
+  <p class="lede">Each cycle the predictor reads the last 8 branch outcomes as inputs of ±1, takes the
+    dot product with its learned weights, and the <em>sign</em> is the guess. On resolution it nudges every
+    weight toward the truth — but only while it's wrong or unsure (|y| ≤ θ). That's the entire algorithm.
+    Pick a branch pattern and watch the weights find it.</p>
+
+  <div class="panel">
+    <div class="controls">
+      <button id="bpRun" class="on">▶ run</button>
+      <button id="bpStep">step</button>
+      <button id="bpReset">reset weights</button>
+      <select id="bpPat">
+        <option value="loop">loop branch · T T T N</option>
+        <option value="alt">alternating · T N T N</option>
+        <option value="biased">biased loop · 90% taken</option>
+        <option value="nested">nested · period 6</option>
+        <option value="random">unpredictable · coin flip</option>
+      </select>
+      <label class="sl">speed <input type="range" id="bpSpeed" min="1" max="60" value="14"></label>
+    </div>
+
+    <div class="pgrid">
+      <div>
+        <div class="bigread">
+          <div class="stat"><div class="v" id="bpY">+0.0</div><div class="k">y = w·x + b</div></div>
+          <div class="stat"><div class="v"><span class="pill n" id="bpPred">—</span></div><div class="k">prediction</div></div>
+          <div class="stat"><div class="v"><span class="verdict" id="bpVerdict">—</span></div><div class="k">vs actual</div></div>
+        </div>
+        <canvas id="bpWeights" width="560" height="190"></canvas>
+        <div class="cap">weight vector — height = magnitude, violet = pushes TAKEN, rose = pushes NOT-TAKEN, lit cell = currently active input</div>
+        <div class="histrow" id="bpHist"></div>
+        <div class="cap" style="text-align:left">global history (oldest → newest) — the inputs x feeding the sum this cycle</div>
+      </div>
+
+      <div>
+        <div class="bigread" style="gap:20px">
+          <div class="stat"><div class="v" id="bpAcc" style="color:var(--violet2)">50.0%</div><div class="k">recent accuracy</div></div>
+          <div class="stat"><div class="v mono" id="bpCount" style="font-size:20px">0</div><div class="k">branches seen</div></div>
+        </div>
+        <div class="acc-meter"><div class="acc-fill" id="bpAccBar" style="width:50%"></div></div>
+        <canvas id="bpSpark" width="420" height="150" style="margin-top:16px"></canvas>
+        <div class="cap">accuracy over time (rolling, last 64 branches)</div>
+        <div class="note" id="bpNote">A regular pattern gets memorized in a few dozen branches — the weights
+          lock and accuracy pins to 100%. Flip to <b>coin flip</b> and the same machine flails at ~50%: there's
+          no signal to learn, and no amount of weight is going to find one.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ MODULE 2 : THE LINEAR WALL ============ -->
+<section>
+  <h2>II · The wall — one layer can't do XOR</h2>
+  <p class="lede">The catch is built into the shape. A single perceptron draws <em>one straight line</em>
+    through its inputs. Some patterns can't be split by any line — the classic is XOR. Here two learners
+    train side-by-side on the same XOR-labelled points: a lone perceptron, and the same thing with one
+    hidden layer of 4 units wedged in. Watch the decision regions form. This is the wall Minsky &amp;
+    Papert named in 1969 — and the half-decade of AI winter that followed it.</p>
+
+  <div class="panel">
+    <div class="controls">
+      <button id="xRun" class="on">▶ train both</button>
+      <button id="xReset">reset</button>
+      <label class="sl">speed <input type="range" id="xSpeed" min="1" max="40" value="16"></label>
+    </div>
+    <div class="xgrid">
+      <div class="xcard">
+        <h3>single perceptron · 1 line</h3>
+        <canvas id="xc1" width="320" height="320"></canvas>
+        <div class="cap" style="text-align:left;margin-top:10px">
+          accuracy <span class="acc" id="xa1" style="color:var(--nottaken)">50%</span>
+          &nbsp;·&nbsp; <span id="xs1" style="color:var(--faint)">one cut, one corner always wrong</span></div>
+      </div>
+      <div class="xcard">
+        <h3>+ one hidden layer · bent boundary</h3>
+        <canvas id="xc2" width="320" height="320"></canvas>
+        <div class="cap" style="text-align:left;margin-top:10px">
+          accuracy <span class="acc" id="xa2" style="color:var(--taken)">50%</span>
+          &nbsp;·&nbsp; <span id="xs2" style="color:var(--faint)">two units fold the space — XOR solved</span></div>
+      </div>
+    </div>
+    <div class="note">The four corners are the XOR truth table. Same-sign diagonals share a class; no single
+      straight line separates them, so the lone perceptron parks around <b>~65–75%</b> forever. Add one layer of
+      depth and the boundary <b>curves</b> — it can carve the diagonal apart and reach 100%. Depth is not decoration;
+      it's the thing that escapes the line.</div>
+  </div>
+</section>
+
+<!-- ============ MODULE 3 : THREE SCALES ============ -->
+<section>
+  <h2>III · The same atom, three times</h2>
+  <p class="lede">Nothing in Module I got replaced to build Module II, and nothing in II gets replaced to
+    build a transformer. The dot-product is the atom. The only question is how many you stack and whether
+    you bend the space between them.</p>
+
+  <div class="three">
+    <div class="scale">
+      <div class="n">in your CPU</div>
+      <h4>The branch predictor</h4>
+      <p>One perceptron. One dot product. One bit out — taken or not. No depth, no nonlinearity, no attention.
+        The most primitive ancestor, still load-bearing in silicon.</p>
+      <div class="eq">ŷ = sign( w·x + b )</div>
+    </div>
+    <div class="scale">
+      <div class="n">the hinge</div>
+      <h4>One hidden layer</h4>
+      <p>Stack two linear maps with a bend between them and the wall falls. This single step is the entire
+        difference between "weighted sum" and "models structure."</p>
+      <div class="eq">ŷ = σ( W₂ · σ( W₁·x ) )</div>
+    </div>
+    <div class="scale">
+      <div class="n">what you're reading on</div>
+      <h4>The transformer</h4>
+      <p>The same dot product, billions of times: QKV projections, MLP blocks — all linear maps, bent by
+        nonlinearities, weighted by <em>content-dependent</em> attention. Pull the bends out and the tower
+        collapses back to one line.</p>
+      <div class="eq">stacked( linear ∘ nonlinear ∘ attention )</div>
+    </div>
+  </div>
+  <div class="arrowrow">dot product &nbsp;→&nbsp; stacked &nbsp;→&nbsp; stacked + bent + attentive</div>
+</section>
+
+<div class="note" style="margin-top:30px;font-size:14px">
+  <b style="color:var(--violet2)">The witness note.</b> The predictor can't see which thread trained it, can't
+  see the program it's guessing for, can't model XOR, can't tell signal from a coin flip until the weights
+  have already drifted. It is competent and blind at once — and that exact blindness, shared across SMT
+  siblings, is the side channel. Same theme as ever: the thing that can't witness itself is the thing that leaks.
+</div>
+
+<footer>
+  THE PERCEPTRON IN SILICON · purple paper side-sheet<br>
+  math verified in Node before build · single perceptron XOR ceiling ≈ 63% · 4-unit hidden layer → 100% · predictor pins real patterns at 100%<br>
+  Rosenblatt 1958 · Jiménez &amp; Lin, <i>Dynamic Branch Prediction with Perceptrons</i>, HPCA 2001 · Minsky &amp; Papert 1969
+</footer>
+
+</div>
+
+<script>
+"use strict";
+// ---------- shared helpers ----------
+function rng(seed){ let s=seed>>>0; return ()=>{ s=(Math.imul(s,1103515245)+12345)&0x7fffffff; return s/0x7fffffff; }; }
+function clamp(v,lo,hi){ return v<lo?lo:(v>hi?hi:v); }
+
+// ===================================================================
+// MODULE I — perceptron branch predictor
+// ===================================================================
+(function(){
+  const H=8, THETA=Math.floor(1.93*H+14);
+  let w, history, counter, rnd, accWin, sparkBuf, last;
+  function reset(){
+    w=new Array(H+1).fill(0);
+    history=new Array(H).fill(1);
+    counter=0; rnd=rng(0x51ed); accWin=[]; sparkBuf=[]; last=null;
+  }
+  reset();
+
+  const pat={
+    loop:n=>(n%4===3)?-1:1,
+    alt:n=>(n%2===0)?1:-1,
+    biased:()=>rnd()<0.9?1:-1,
+    nested:n=>{ const m=n%6; return (m===2||m===5)?-1:1; },
+    random:()=>rnd()<0.5?1:-1
+  };
+  let curPat='loop';
+
+  function tick(){
+    let y=w[0];
+    for(let i=0;i<H;i++) y+=w[i+1]*history[i];
+    const pred=y>=0?1:-1;
+    const actual=pat[curPat](counter);
+    const correct=pred===actual;
+    // train
+    if(!correct || Math.abs(y)<=THETA){
+      w[0]=clamp(w[0]+actual,-127,127);
+      for(let i=0;i<H;i++) w[i+1]=clamp(w[i+1]+actual*history[i],-127,127);
+    }
+    // bookkeeping
+    accWin.push(correct?1:0); if(accWin.length>64) accWin.shift();
+    const acc=accWin.reduce((a,b)=>a+b,0)/accWin.length;
+    sparkBuf.push(acc); if(sparkBuf.length>140) sparkBuf.shift();
+    counter++;
+    history=history.slice(1); history.push(actual);
+    last={y,pred,actual,correct,acc};
+  }
+
+  // ---- drawing ----
+  const wc=document.getElementById('bpWeights'), wx=wc.getContext('2d');
+  const sc=document.getElementById('bpSpark'), sx=sc.getContext('2d');
+  function fit(cv){ const r=cv.getBoundingClientRect(); const dpr=window.devicePixelRatio||1;
+    cv.width=r.width*dpr; cv.height=r.height*dpr; const g=cv.getContext('2d'); g.setTransform(dpr,0,0,dpr,0,0);
+    return {w:r.width,h:r.height}; }
+  function drawWeights(){
+    const d=fit(wc); wx.clearRect(0,0,d.w,d.h);
+    const n=H+1, pad=18, gap=10;
+    const bw=(d.w-pad*2-gap*(n-1))/n;
+    const midY=d.h/2, maxMag=Math.max(20,...w.map(v=>Math.abs(v)));
+    // zero line
+    wx.strokeStyle='#2e2148'; wx.lineWidth=1; wx.beginPath(); wx.moveTo(pad,midY); wx.lineTo(d.w-pad,midY); wx.stroke();
+    for(let i=0;i<n;i++){
+      const x=pad+i*(bw+gap);
+      const v=w[i];
+      const hgt=(Math.abs(v)/maxMag)*(midY-16);
+      const isBias=(i===0);
+      const active=!isBias && history[i-1]>0; // active-high marker
+      const up=v>=0;
+      const col=up?'#a78bfa':'#fb7185';
+      wx.fillStyle=col; wx.globalAlpha=isBias?0.55:0.92;
+      const y0=up?midY-hgt:midY;
+      wx.fillRect(x,y0,bw,Math.max(2,hgt));
+      wx.globalAlpha=1;
+      // active input ring
+      if(!isBias){
+        wx.strokeStyle=history[i-1]>0?'#34d399':'#fb7185';
+        wx.lineWidth=2; wx.globalAlpha=.9;
+        wx.strokeRect(x-1, midY-2, bw+2, 4); wx.globalAlpha=1;
+      }
+      // label
+      wx.fillStyle='#6b5a8c'; wx.font='10px ui-monospace,monospace'; wx.textAlign='center';
+      wx.fillText(isBias?'b':('h'+(i)), x+bw/2, d.h-4);
+    }
+  }
+  function drawSpark(){
+    const d=fit(sc); sx.clearRect(0,0,d.w,d.h);
+    const pad=6;
+    // gridlines at 50 / 100
+    sx.strokeStyle='#241738'; sx.lineWidth=1;
+    [0,.5,1].forEach(f=>{ const y=pad+(1-f)*(d.h-pad*2); sx.beginPath(); sx.moveTo(pad,y); sx.lineTo(d.w-pad,y); sx.stroke();
+      sx.fillStyle='#4a3a6b'; sx.font='9px ui-monospace,monospace'; sx.textAlign='left';
+      sx.fillText((f*100)+'%', pad+2, y-2); });
+    if(sparkBuf.length<2) return;
+    const grad=sx.createLinearGradient(0,0,d.w,0); grad.addColorStop(0,'#7c3aed'); grad.addColorStop(1,'#c4b5fd');
+    sx.strokeStyle=grad; sx.lineWidth=2; sx.beginPath();
+    sparkBuf.forEach((v,i)=>{ const x=pad+(i/(sparkBuf.length-1))*(d.w-pad*2);
+      const y=pad+(1-v)*(d.h-pad*2); i?sx.lineTo(x,y):sx.moveTo(x,y); });
+    sx.stroke();
+  }
+  function drawHist(){
+    const el=document.getElementById('bpHist'); el.innerHTML='';
+    history.forEach((v,i)=>{ const c=document.createElement('div');
+      c.className='hbit '+(v>0?'p':'m'); c.textContent=v>0?'T':'N'; el.appendChild(c); });
+  }
+  function render(){
+    drawWeights(); drawSpark(); drawHist();
+    if(last){
+      document.getElementById('bpY').textContent=(last.y>=0?'+':'')+last.y.toFixed(1);
+      const pill=document.getElementById('bpPred');
+      pill.textContent=last.pred>0?'TAKEN':'NOT TAKEN';
+      pill.className='pill '+(last.pred>0?'t':'n');
+      const vd=document.getElementById('bpVerdict');
+      vd.textContent=last.correct?('HIT · '+(last.actual>0?'T':'N')):('MISS · '+(last.actual>0?'T':'N'));
+      vd.className='verdict '+(last.correct?'hit':'miss');
+      const accPct=(last.acc*100).toFixed(1)+'%';
+      document.getElementById('bpAcc').textContent=accPct;
+      document.getElementById('bpAccBar').style.width=(last.acc*100)+'%';
+      document.getElementById('bpCount').textContent=counter;
+    }
+  }
+
+  // ---- loop ----
+  let running=true, acc=0, speed=14;
+  function frame(){ acc+=speed/6;
+    while(acc>=1){ tick(); acc--; }
+    render(); if(running) requestAnimationFrame(frame); }
+  function start(){ if(!running){ running=true; requestAnimationFrame(frame);} }
+
+  document.getElementById('bpRun').onclick=function(){ running=!running; this.classList.toggle('on',running);
+    this.textContent=running?'▶ run':'❚❚ paused'; if(running) requestAnimationFrame(frame); };
+  document.getElementById('bpStep').onclick=()=>{ tick(); render(); };
+  document.getElementById('bpReset').onclick=()=>{ reset(); render(); };
+  document.getElementById('bpPat').onchange=function(){ curPat=this.value; reset(); render(); };
+  document.getElementById('bpSpeed').oninput=function(){ speed=+this.value; };
+
+  render(); requestAnimationFrame(frame);
+})();
+
+// ===================================================================
+// MODULE II — XOR : single perceptron vs one hidden layer
+// ===================================================================
+(function(){
+  const tanh=Math.tanh;
+  let rnd, P, N, a1win, a2win;
+  function reset(){
+    rnd=rng(0xC0FFEE);
+    // single perceptron weights [b,w0,w1]
+    P=[0,0,0];
+    // 2-layer: H=4 hidden
+    const Hn=4;
+    N={H:Hn,
+       W1:Array.from({length:Hn},()=>[rnd()*2-1,rnd()*2-1,rnd()*2-1]),
+       W2:[rnd()*2-1,...Array.from({length:Hn},()=>rnd()*2-1)]};
+    a1win=[]; a2win=[];
+  }
+  reset();
+  const LR=0.3;
+
+  function pForward(x0,x1){ return P[0]+P[1]*x0+P[2]*x1; }
+  function nForward(x0,x1){
+    const h=N.W1.map(w=>tanh(w[0]+w[1]*x0+w[2]*x1));
+    let s=N.W2[0]; for(let j=0;j<N.H;j++) s+=N.W2[j+1]*h[j];
+    return {o:tanh(s),h};
+  }
+  function tick(){
+    const x0=rnd()<0.5?1:-1, x1=rnd()<0.5?1:-1;
+    const t=(x0===x1)?-1:1;        // XOR in ±1
+    // single perceptron (perceptron rule)
+    const y=pForward(x0,x1); const pp=y>=0?1:-1;
+    if(pp!==t || Math.abs(y)<=14){ P[0]=clamp(P[0]+t,-127,127); P[1]=clamp(P[1]+t*x0,-127,127); P[2]=clamp(P[2]+t*x1,-127,127); }
+    a1win.push(pp===t?1:0); if(a1win.length>400) a1win.shift();
+    // 2-layer (SGD backprop, MSE on tanh)
+    const f=nForward(x0,x1); const np=f.o>=0?1:-1;
+    const dOut=(f.o-t)*(1-f.o*f.o);
+    const dh=f.h.map((hj,j)=>dOut*N.W2[j+1]*(1-hj*hj));
+    N.W2[0]-=LR*dOut; for(let j=0;j<N.H;j++) N.W2[j+1]-=LR*dOut*f.h[j];
+    for(let j=0;j<N.H;j++){ N.W1[j][0]-=LR*dh[j]; N.W1[j][1]-=LR*dh[j]*x0; N.W1[j][2]-=LR*dh[j]*x1; }
+    a2win.push(np===t?1:0); if(a2win.length>400) a2win.shift();
+  }
+  const acc=win=>win.length?win.reduce((a,b)=>a+b,0)/win.length:0.5;
+
+  // decision-region rendering
+  const c1=document.getElementById('xc1'), g1=c1.getContext('2d');
+  const c2=document.getElementById('xc2'), g2=c2.getContext('2d');
+  const RES=44;
+  function drawRegion(g,fn){
+    const W=c1.width, H=c1.height; // both 320
+    const img=g.getImageData(0,0,W,H); const data=img.data;
+    const cell=W/RES;
+    for(let gy=0;gy<RES;gy++) for(let gx=0;gx<RES;gx++){
+      const x0=(gx/(RES-1))*2.4-1.2, x1=1.2-(gy/(RES-1))*2.4;
+      const v=fn(x0,x1); // signed
+      // violet for +1 region, deep for -1, intensity by confidence
+      const conf=clamp(Math.abs(v),0,1);
+      let r,gg,b;
+      if(v>=0){ r=124+conf*40; gg=58+conf*40; b=237; }
+      else    { r=24; gg=12; b=40+conf*30; }
+      for(let py=0;py<cell;py++)for(let px=0;px<cell;px++){
+        const X=Math.floor(gx*cell+px), Y=Math.floor(gy*cell+py);
+        if(X<W&&Y<H){ const idx=(Y*W+X)*4; data[idx]=r; data[idx+1]=gg; data[idx+2]=b; data[idx+3]=255; }
+      }
+    }
+    g.putImageData(img,0,0);
+    // plot the 4 XOR corners
+    const pts=[[-1,-1,-1],[1,1,-1],[-1,1,1],[1,-1,1]]; // x0,x1,label
+    pts.forEach(([px,py,lb])=>{
+      const X=((px+1.2)/2.4)*W, Y=((1.2-py)/2.4)*H;
+      g.beginPath(); g.arc(X,Y,9,0,7); 
+      g.fillStyle=lb>0?'#34d399':'#fb7185'; g.fill();
+      g.lineWidth=2.5; g.strokeStyle='#0a0710'; g.stroke();
+    });
+  }
+  function render(){
+    drawRegion(g1,(a,b)=>{ const y=pForward(a,b); return clamp(y/30,-1,1); });
+    drawRegion(g2,(a,b)=>nForward(a,b).o);
+    const a1=acc(a1win), a2=acc(a2win);
+    document.getElementById('xa1').textContent=Math.round(a1*100)+'%';
+    document.getElementById('xa2').textContent=Math.round(a2*100)+'%';
+    document.getElementById('xs1').textContent = a1<0.85?'one cut — a corner stays wrong':'(can\u2019t hold — XOR has no line)';
+    document.getElementById('xs2').textContent = a2>0.93?'space folded — XOR solved':'folding the space\u2026';
+  }
+
+  let running=true, accum=0, speed=16;
+  function frame(){ accum+=speed;
+    let steps=Math.min(accum|0,80); accum-=steps;
+    for(let i=0;i<steps;i++) tick();
+    render(); if(running) requestAnimationFrame(frame); }
+
+  document.getElementById('xRun').onclick=function(){ running=!running; this.classList.toggle('on',running);
+    this.textContent=running?'▶ train both':'❚❚ paused'; if(running) requestAnimationFrame(frame); };
+  document.getElementById('xReset').onclick=()=>{ reset(); render(); };
+  document.getElementById('xSpeed').oninput=function(){ speed=+this.value; };
+
+  render(); requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
