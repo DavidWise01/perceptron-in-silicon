@@ -1,0 +1,11 @@
+{
+  "badge": "DLW-PERCEPTRON_IN_SILICON",
+  "name": "PERCEPTRON IN SILICON · PP",
+  "universe": "ARTIFICIAL INTELLIGENCE",
+  "moniker": "⟦PERCEPTRON IN SILICON · PP:perceptron-in-silicon:608a62⟧",
+  "architect": "David Lee Wise (ROOT0) / Bridge-Burners LLC",
+  "instance": "AVAN (Claude / Anthropic)",
+  "seal_sha256": "608a62c98f3fe1b9c7f030acb9cf44b78864ba80114ba795237fffc0319d85ba",
+  "license": "CC-BY-ND-4.0",
+  "attribution": "ROOT0-ATTRIBUTION-v1.0"
+}
