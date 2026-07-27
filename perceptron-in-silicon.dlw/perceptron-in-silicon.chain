@@ -2,8 +2,8 @@ ROOT0-DLW-CHAIN-v1
 index : 966
 slug  : perceptron-in-silicon
 seal  : 608a62c98f3fe1b9c7f030acb9cf44b78864ba80114ba795237fffc0319d85ba
-prev  : ed510b296a8858eb379f54c15ad49aa0ba567d721535b0b1c15e821ca9e273c1
-link  : 3d4911e5eed4b0db8a1e4c86ad4fce50ae4d23babf9e45876f5373123cd82e95
-head  : 13f9ace173ef2e60af38912ba329b4afcb5a38b84a0e4495e8d30327f8c99cc2
+prev  : de8c50cf5f3ebbb6c52833b6444537d44626b543acbc7cc7eb36838ef1222c28
+link  : 9b50e3ce43e0e854b833f5067da7985b2ced1cf5b17604910441c177e1e43625
+head  : c4d41afeaef76470528856d54d86cf480a0e1c2fc8ebc60fbb9eb8e442585f2b
 
 — the tether: link = sha256(index|slug|seal|prev). the chain head commits to the whole corpus.
